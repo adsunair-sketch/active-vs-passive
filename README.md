@@ -22,38 +22,7 @@ $$AR = \frac{\text{Count of "I" as Active Subject}}{\text{Total Number of Action
 * $AR > 0.7$: High Individual Agency (often associated with high-SES coaching).
 * $AR < 0.3$: High Relationality/Systemic focus (often associated with marginalized or collectivist backgrounds).
 
-2. Python Implementation Logic
-Here is how you would structure the extraction function in your pipeline:
-Python
-
-import spacy
-
-nlp = spacy.load("en_core_web_sm")
-
-def extract_agency_metrics(text):
-    doc = nlp(text)
-    total_verbs = 0
-    i_as_subject = 0
-    relational_subjects = 0 # we, family, team, community
-    
-    relational_words = {'we', 'team', 'community', 'family', 'us', 'group'}
-
-    for token in doc:
-        # Look for verbs
-        if token.pos_ == "VERB":
-            total_verbs += 1
-            # Find the subject of the verb
-            for child in token.children:
-                if child.dep_ == "nsubj":
-                    if child.text.lower() == "i":
-                        i_as_subject += 1
-                    elif child.text.lower() in relational_words:
-                        relational_subjects += 1
-                        
-    return {
-        "individual_agency_score": i_as_subject / total_verbs if total_verbs > 0 else 0,
-        "relational_density": relational_subjects / total_verbs if total_verbs > 0 else 0
-    }
+2. Python Implementation Logic [provides code in the metric portion]
 
 3. Integrating with the LLM Lab
 Once you have these scores for each essay, you need to "interrogate" the LLM's bias.
