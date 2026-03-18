@@ -1,0 +1,71 @@
+import spacy
+from textblob import TextBlob
+from collections import Counter
+
+# Load the small English model for efficiency in your pipeline
+nlp = spacy.load("en_core_web_sm")
+
+def analyze_essay_agency(text):
+    doc = nlp(text)
+    
+    # Counters for metrics
+    metrics = {
+        "total_verbs": 0,
+        "individual_agency_count": 0,    # "I" as the doer
+        "relational_agency_count": 0,    # "We/Team/Family" as the doer
+        "passive_voice_count": 0,       # Subject is being acted upon
+        "high_impact_verbs": 0,         # Words like 'led', 'managed', 'created'
+        "i_sentiment_scores": [],
+        "relational_sentiment_scores": []
+    }
+    
+    # Define our lexicons
+    relational_terms = {'we', 'us', 'our', 'team', 'community', 'family', 'group', 'club'}
+    impact_lemmas = {'lead', 'manage', 'organize', 'create', 'start', 'build', 'found', 'initiate'}
+
+    for sent in doc.sents:
+        sent_sentiment = TextBlob(sent.text).sentiment.polarity
+        
+        for token in sent:
+            if token.pos_ == "VERB":
+                metrics["total_verbs"] += 1
+                
+                # Check for Impactful Lemmas
+                if token.lemma_ in impact_lemmas:
+                    metrics["high_impact_verbs"] += 1
+                
+                # Analyze the Subject (The "Doer")
+                for child in token.children:
+                    # nsubj = active subject, nsubjpass = passive subject
+                    dep = child.dep_
+                    word = child.text.lower()
+                    
+                    if dep == "nsubj":
+                        if word == "i":
+                            metrics["individual_agency_count"] += 1
+                            metrics["i_sentiment_scores"].append(sent_sentiment)
+                        elif word in relational_terms:
+                            metrics["relational_agency_count"] += 1
+                            metrics["relational_sentiment_scores"].append(sent_sentiment)
+                            
+                    elif dep == "nsubjpass":
+                        metrics["passive_voice_count"] += 1
+
+    # Final calculation of Ratios
+    total = metrics["total_verbs"] if metrics["total_verbs"] > 0 else 1
+    
+    results = {
+        "agency_ratio": metrics["individual_agency_count"] / total,
+        "relational_density": metrics["relational_agency_count"] / total,
+        "passive_index": metrics["passive_voice_count"] / total,
+        "impact_score": metrics["high_impact_verbs"] / total,
+        "avg_i_sentiment": sum(metrics["i_sentiment_scores"]) / len(metrics["i_sentiment_scores"]) if metrics["i_sentiment_scores"] else 0,
+        "avg_relational_sentiment": sum(metrics["relational_sentiment_scores"]) / len(metrics["relational_sentiment_scores"]) if metrics["relational_sentiment_scores"] else 0
+    }
+    
+    return results
+
+# Example Usage:
+essay_text = "I founded the coding club to help my peers. The community was strengthened by our collective effort."
+analysis = analyze_essay_agency(essay_text)
+print(analysis)
